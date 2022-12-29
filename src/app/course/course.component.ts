@@ -49,5 +49,13 @@ export class CourseComponent implements OnInit, AfterViewInit {
     ).pipe(map((res) => res["payload"]));
   }
 
-  ngAfterViewInit() {}
+  ngAfterViewInit() {
+    fromEvent<any>(this.input.nativeElement, "keyup")
+      .pipe(
+        map((event) => event.target.value),
+        debounceTime(400),
+        distinctUntilChanged() // no more duplicated values
+      )
+      .subscribe(console.log);
+  }
 }
