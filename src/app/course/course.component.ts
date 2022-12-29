@@ -30,6 +30,8 @@ import { createHttpObservable } from "../common/util";
   styleUrls: ["./course.component.css"],
 })
 export class CourseComponent implements OnInit, AfterViewInit {
+  courseId: string;
+
   course$: Observable<Course>;
   lessons$: Observable<Lesson[]>;
 
@@ -38,24 +40,26 @@ export class CourseComponent implements OnInit, AfterViewInit {
   constructor(private route: ActivatedRoute) {}
 
   ngOnInit() {
-    const courseId = this.route.snapshot.params["id"];
+    this.courseId = this.route.snapshot.params["id"];
 
     this.course$ = createHttpObservable(
-      `http://localhost:9000/api/courses/${courseId}`
+      `http://localhost:9000/api/courses/${this.courseId}`
     );
-
-    this.lessons$ = createHttpObservable(
-      `http://localhost:9000/api/lessons?courseId=${courseId}&pageSize=100`
-    ).pipe(map((res) => res["payload"]));
   }
 
   ngAfterViewInit() {
-    fromEvent<any>(this.input.nativeElement, "keyup")
-      .pipe(
-        map((event) => event.target.value),
-        debounceTime(400),
-        distinctUntilChanged() // no more duplicated values
-      )
-      .subscribe(console.log);
+    this.lessons$ = fromEvent<any>(this.input.nativeElement, "keyup").pipe(
+      map((event) => event.target.value),
+      startWith(""),
+      debounceTime(400), // waiting for a value to become stable
+      distinctUntilChanged(), // no more duplicated values
+      switchMap((search) => this.loadLessons(search))
+    );
+  }
+
+  loadLessons(search = ""): Observable<Lesson[]> {
+    return createHttpObservable(
+      `http://localhost:9000/api/lessons?courseId=${this.courseId}&pageSize=100&filter=${search}`
+    ).pipe(map((res) => res["payload"]));
   }
 }
